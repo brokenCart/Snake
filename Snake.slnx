@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Snake/Snake.vcxproj" />
+  <Project Path="Snake/Snake.vcxproj" Id="76eafebe-9724-431b-95c6-e8827f84e503" />
 </Solution>
