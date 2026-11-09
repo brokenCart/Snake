@@ -15,28 +15,32 @@ unsigned char grid[nGridHeight][nGridWidth] = {};
 int nScreenWidth = 120;
 int nScreenHeight = 40;
 
-bool IsSafe(int px, int py, vector<pair<int, int>> &snake) {
-    if (grid[py][px] == 1) {
+bool IsSafe(vector<pair<int, int>> &snake) {
+    if (grid[snake[0].second][snake[0].first] == 1) {
         return false;
     }
 
-    // ## NOTE ##
-    // We only loop before the tail
-    // because the tail will be moved next and won't be
-    // at that position anymore.
-    // BUT THIS DOESN'T HANDLES THE CASE
-    // WHEN THE SNAKE GROWS AND HITS THE TAIL
-    // AT THE EXACT SAME FRAME.
-    // **TO BE FIXED**
-    // A better solution would be to first move the snake
-    // first and eat the fruit first before checking for collisions.
-    for (int i = 1; i < snake.size() - 1; i++) {
-        if (snake[i].first == px && snake[i].second == py) {
+    for (int i = 1; i < snake.size(); i++) {
+        if (snake[i] == snake[0]) {
             return false;
         }
     }
 
     return true;
+}
+
+void PlaceFruit(pair<int, int> &fruit, vector<pair<int, int>> &snake) {
+    bool bFruitOnSnake;
+    do {
+        fruit = { 1 + rand() % (nGridWidth - 2), 1 + rand() % (nGridHeight - 2) };
+        bFruitOnSnake = false;
+        for (auto& v : snake) {
+            if (v == fruit) {
+                bFruitOnSnake = true;
+                break;
+            }
+        }
+    } while (bFruitOnSnake);
 }
 
 int main()
@@ -63,8 +67,7 @@ int main()
 
     // Fruit
     pair<int, int> fruit;
-    fruit.first = 1 + rand() % (nGridWidth - 2);
-    fruit.second = 1 + rand() % (nGridHeight - 2);
+    PlaceFruit(fruit, snake);
 
     wchar_t* screen = new wchar_t[nScreenWidth * nScreenHeight];
     for (int i = 0; i < nScreenWidth * nScreenHeight; i++) screen[i] = L' ';
@@ -123,28 +126,13 @@ int main()
         }
 
         // Move the snake's head
-        if (IsSafe(snake[0].first + nVelX, snake[0].second + nVelY, snake)) {
-            snake[0].first += nVelX;
-            snake[0].second += nVelY;
-        }
-        else {
-            bGameOver = true;
-        }
-
-        // Eat the fruit
-        if (snake[0].first == fruit.first && snake[0].second == fruit.second) {
-            nScore++;
-            fruit.first = 1 + rand() % (nGridWidth - 2);
-            fruit.second = 1 + rand() % (nGridHeight - 2);
-            // The position of the tail being
-            // appended doesn't matter as it will be updated very soon.
-            // So this could have been { x, y }
-            // where x, y are any arbitrary values.
-            snake.push_back({ snake[nScore].first - nVelX, snake[nScore].second - nVelY });
-        }
+        // without checking if the snake is safe.
+        snake[0].first += nVelX;
+        snake[0].second += nVelY;
 
         // Shift the snake's body
         // Only shift if the snake's head has moved!
+        pair<int, int> tail = snake[snake.size() - 1];
         if (nNextX != snake[0].first || nNextY != snake[0].second) {
             for (int i = 1; i < snake.size(); i++) {
                 int nCurX = snake[i].first, nCurY = snake[i].second;
@@ -153,6 +141,26 @@ int main()
                 nNextX = nCurX;
                 nNextY = nCurY;
             }
+        }
+
+        // Eat the fruit
+        if (snake[0].first == fruit.first && snake[0].second == fruit.second) {
+            nScore++;
+            snake.push_back(tail);
+            PlaceFruit(fruit, snake);
+        }
+
+        // Check if the snake is safe
+        if (!IsSafe(snake)) {
+            bGameOver = true;
+            // Move the whole snake one move back
+            // so that the snake is not overlapping with the wall
+            // or the body.
+            for (int i = 0; i < snake.size() - 1; i++) {
+                snake[i].first = snake[i + 1].first;
+                snake[i].second = snake[i + 1].second;
+            }
+            snake[snake.size() - 1] = tail;
         }
 
         // RENDER OUTPUT
